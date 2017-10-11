@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Simple Github API Webapp</title>
+		<meta name="author" content="Hung Dang">
+		<link rel="shortcut icon" href="images/favicon.ico">
+		<link rel="icon" href="images/favicon.ico">
+		<link rel="stylesheet" type="text/css" media="all" href="css/styles.css">
+		<script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+		<script type="text/javascript" src="js/sweetalert.min.js"></script>
+		<script type="text/javascript" src="js/parse-link-header.js"></script>
+	</head>
+	<body>
+		<div id="w">
+			<noscript><h1>Please enable JavaScript to see the content of this page!</h1></noscript>
+			
+			<h1 id="heading"></h1>
+			
+			<div id="ghapidata" class="clearfix">
+			</div>
+			
+			<div class="overlay-loader" style="display:none;">
+				<div class="loader">
+					<div></div>
+					<div></div>
+					<div></div>
+					<div></div>
+					<div></div>
+					<div></div>
+					<div></div>
+				</div>
+			</div>
+		</div>
+
+		<script type="text/javascript">
+			// Reference
+			// https://coderwall.com/p/zrlulq/parsing-a-link-header-in-javascript
+			// https://github.com/lisposter/github-pagination
+			// http://cssload.net/
+			// https://sweetalert.js.org/
+			// http://blog.teamtreehouse.com/code-a-simple-github-api-webapp-using-jquery-ajax
+			
+			// Making request	
+			function requestJSON(url, callback) {
+				if (nextPage === 0) return;
+				
+				var currentTimestamp = Date.now();
+				var diff = currentTimestamp - lastTimestamp;
+					
+				if (diff < 60000) { // Less than 1 minute
+					return;
+				} else {
+					lastTimestamp = 0;
+				}
+				
+				$('.overlay-loader').show();
+			
+				$.ajax({
+					url: url,
+					dataType: 'json'
+				})
+				.done(function(data, textStatus, jqXHR) {
+					var linkHeader = jqXHR.getResponseHeader('Link');
+					if (linkHeader !== null) { // In case there is no user
+						linkHeader = parseLinkHeader(linkHeader);
+					}
+					
+					if (linkHeader !== null && linkHeader['next'] !== undefined) {
+						nextPage = linkHeader['next']['href'].match(/[^_]page=(\d+)/)[1];
+					} else {
+						nextPage = 0;
+					}
+					
+					callback.call(null, data);
+					
+					if (linkHeader !== null && linkHeader['last'] === undefined) {
+						nextPage = 0;
+						
+						swal({
+							title: "Good job!",
+							text: "You have viewed all " + data.total_count + " Github's Singapore users!",
+							icon: "success",
+							button: "Aww yiss!",
+						});
+					}
+					
+					$('#heading').html(headingText + data.total_count);
+				})
+				.fail(function(jqXHR, textStatus, errorThrown) {
+					lastTimestamp = Date.now();
+					
+					swal({
+						title: "Oops...",
+						text: "Please try again after a few minute!",
+						icon: "error"
+					});
+					
+					if ($('#heading').html() === '') {
+						$('#heading').html('Please try again after a few minute!');
+					}
+				})
+				.always(function() {
+					$('.overlay-loader').hide();
+				});
+			}
+			
+			// Append data from Github API into page
+			function displayData(data) {
+				var users = data.items;
+				$.each(users, function(index) {
+					var username = users[index].login;
+					var avatarUrl = users[index].avatar_url;
+					var profileUrl = users[index].html_url;
+					var organizationsUrl = users[index].organizations_url;
+					var reposUrl = users[index].repos_url;
+					
+					var outHtml = '<div class="ghcontent">';
+					outHtml += '<div class="username">' + username + '</div>';
+					outHtml += '<div class="avi"><a href="' + profileUrl + '" target="_blank"><img src="' + avatarUrl + '" width="80" height="80" alt="' + username + '"></a></div>';
+					outHtml += '</div>';
+					
+					$('#ghapidata').append(outHtml);
+				});
+			}
+			
+			var nextPage = 1;
+			var perPage = 100; // Number of users per request
+			var country = 'singapore';
+			var url = 'https://api.github.com/search/users?q=location%3A' + country + '&per_page=' + perPage;
+			var headingText = "Github's Singapore Users: ";
+			
+			var lastTimestamp = 0; // The last timestamp popup error message
+			
+			$(document).ready(function() {
+				var win = $(window);
+			
+				// Each time the user scrolls
+				win.scroll(function() {
+					// End of the document reached?
+					if ($(document).height() - win.height() == win.scrollTop()) {
+						requestJSON(url + '&page=' + nextPage, displayData);
+					}
+				});
+				
+				// Trigger window scroll
+				win.scroll();
+				
+				swal({
+					title: "How to use?",
+					text: "Scroll down to load more Github's Singapore users",
+					icon: "info"
+				});
+			});
+		</script>
+	</body>
+</html>
