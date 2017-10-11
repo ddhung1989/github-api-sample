@@ -16,7 +16,7 @@ A simple webapp demonstrates how to use [GitHub's API](https://developer.github.
 
 The MIT License
 
-Copyright (c) 2017 (Hung Dang)[https://github.com/ddhung1989]
+Copyright (c) 2017 [Hung Dang](https://github.com/ddhung1989)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
